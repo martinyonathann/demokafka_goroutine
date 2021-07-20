@@ -1,4 +1,4 @@
-package demokafkagoroutine
+package main
 
 import (
 	"context"
@@ -6,15 +6,18 @@ import (
 	"strconv"
 	"time"
 
-	kafka "github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go"
 )
+
 const (
 	topic          = "message-log"
 	broker1Address = "localhost:9093"
 	broker2Address = "localhost:9094"
 	broker3Address = "localhost:9095"
-) 
+)
+
 func produce(ctx context.Context) {
+	// fmt.Println("masuk produce")
 	//initialize a counter
 	i := 0
 
@@ -44,4 +47,33 @@ func produce(ctx context.Context) {
 		//sleep for a second
 		time.Sleep(time.Second)
 	}
+}
+
+func consume(ctx context.Context) {
+	// fmt.Println("masuk consumer")
+	// initialize a new reader with the brokers and topic
+	// the groupID identifies the consumer and prevents
+	// it from receiving duplicate messages
+	r := kafka.NewReader(kafka.ReaderConfig{
+		Brokers: []string{broker1Address, broker2Address, broker3Address},
+		Topic:   topic,
+		GroupID: "my-group",
+	})
+
+	for {
+		// the `ReadMessage` method blocks util we receive the next event
+		msg, err := r.ReadMessage(ctx)
+		if err != nil {
+			panic("could not read message" + err.Error())
+		}
+		// after receiving the message, log its value
+		fmt.Println("received: ", string(msg.Value))
+	}
+}
+
+func main() {
+	ctx := context.Background()
+	go produce(ctx)
+	go consume(ctx)
+	time.Sleep(1 * time.Second)
 }
